@@ -3006,15 +3006,6 @@ A.terminal=function()
             prompt=color.white+"["+color.yellow+c.public_ip+color.cap+"|"+color.yellow+c.local_ip+color.white+"] "+cmds.usr+"@"+A.sessions.current.host_computer.get_name+":"+cmds.dir+"> "
         input=user_input(prompt)
         input=input.split(" ")
-        if input[0]=="encode" then
-            m=user_input("local or server:")
-            if m=="server" then file=A.computer.File(user_input("Full Path: "))
-            if m=="local" then file=A.sessions.current.host_computer.File(user_input("Full Path: "))
-            if typeof(file)=="file" then
-                print "doing shit"
-                A.scramble(file)
-            end if
-        end if
         if input[0]=="apt-get" then
             input.reverse
             input.pop
@@ -3096,7 +3087,11 @@ A.terminal=function()
                 if input[1]=="hack" then 
                     A.programs.hack.run(A.programs[input[0]].run)
                 else
-                    A.programs.nmap.run(A.programs[input[0]].run("*",input[2]))
+                    if input.len==3 then
+                        A.programs.nmap.run(A.programs[input[0]].run("*",input[2]))
+                    else
+                        A.programs.nmap.run(A.programs[input[0]].run("*"))
+                    end if
                 end if
             else if input.len==2 then
                 if A.programs.hasIndex(input[0]) then A.programs[input[0]].run(input[1])
