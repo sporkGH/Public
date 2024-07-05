@@ -751,6 +751,7 @@ A.programs.nmap.run=function(ip)
     print(color.white+"Public IP:<b> "+color.yellow+router.public_ip+color.white+"</b> Private IP: <b>"+color.yellow+router.local_ip+"</b>")
     whois=whois(router.public_ip).split(char(10))
     for line in whois
+        if line=="[Neurobox Network]" then ;print color.white+line;continue;end if
         print color.white+line.split(":")[0]+":"+color.yellow+line.split(":")[1]
     end for
     print(color.white+"Kernel_Router.so Version: "+color.yellow+router.kernel_version)
