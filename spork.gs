@@ -4,34 +4,59 @@ A.call=program_path.split("/").len-1
 color = {};color.u="<u>";color.white = "<color=#FFFFFF>";color.grey = "<color=#A5A5A5>";color.blue = "<color=#003AFF>";color.cyan = "<color=#00FFE7>";color.purple = "<color=#D700FF>";color.red = "<color=#AA0000>";color.yellow = "<color=#FBFF00>";color.orange = "<color=#FF8701>";color.green = "<color=#00ED03>";color.fill = "><> ><> ><> ><> ><> ><> ><> ><> ><> ><> ><> ><>";color.cap = "</color>";title = "<color=#00FFE7>[<b>SeaShell</b>]</color> ";init = "<color=#00ED03><b>init:</b></color> ";error = "<color=#AA0000><b>Error:</b></color> ";warning = "<color=#FF8701><b>Warning:</b></color> ";color.rainbow = color.red+"R"+color.cap+color.orange+"A"+color.cap+color.cap+color.yellow+"I"+color.cap+color.cap+color.green+"N"+color.cap+color.cap+color.cyan+"B"+color.cap+color.cap+color.blue+"O"+color.cap+color.cap+color.purple+"W"+color.cap;
 format = function(text, fillLastRow=false);text = text.replace("\\\\",char(20000)).replace("\\<",char(20001)).replace("\\>",char(20002)).replace("\\ ",char(20003)).replace("\\n",char(10));text = text.replace("<b>","<b><mspace=9.9>").replace("</b>","</mspace></b>");origList = text.split(" ");for e in origList;if e.indexOf(char(10)) isa number then;sp = e.split(char(10));origList[__e_idx] = sp[0];origList.insert(__e_idx+1,[char(10),sp[1]].join(""));__e_idx = __e_idx + 1;end if;end for;while true;start = text.indexOf("<");if typeof(start) == "null" then break;finish = text.indexOf(">",start);if typeof(finish) == "null" then break;text = [text[:start], text[finish+1:]].join("");end while;text = format_columns(text);lines = text.split(char(10));if fillLastRow then text = [text," "*(lines[0].len-lines[-1].len-1)].join("");newList = text.split(" ");i = 0;for item in newList;if item != "" then;newList[__item_idx] = "";while i < origList.len and origList[i] == "";i = i + 1;end while;else;continue;end if;newList[__item_idx] = origList[i];i = i + 1;end for;return newList.join(" ").replace(char(20000),"\").replace(char(20001),"<").replace(char(20002),">").replace(char(20003)," ");end function
 A.local_shit=function()
-    c=A.sessions.current.host_computer
-    s=A.hardware_server.scp("/root/lib/metaxploit.so","/home/guest",A.sessions.current)
-    bat=c.File("/home/guest/BS.bat")
+    temp={"files":[],"folders":[]}
+    A.dropzone=null    
+    c=A.sessions.current.host_computer  
+    check=function(folder)
+        folders=folder.get_folders
+        files=folder.get_files
+        for file in files
+            temp.files.push(file)
+        end for
+        for folder in folders
+            temp.folders.push(folder)
+        end for
+    end function
+    main=function(f)
+        for folder in f.get_folders
+            res=main(folder)
+            check(folder)
+            if res then return res
+        end for
+        return ""
+    end function
+    main(c.File("/"))
+    for folder in temp.folders
+        if folder.has_permission("w") then A.dropzone=folder.path
+    end for
+    if A.dropzone==null then A.dropzone=A.dropzone
+    s=A.hardware_server.scp("/root/lib/metaxploit.so",A.dropzone,A.sessions.current)
+    bat=c.File(A.dropzone+"/BS.bat")
     if not bat then
-        cr=c.touch("/home/guest","BS.bat")
+        cr=c.touch(A.dropzone,"BS.bat")
     if typeof(cr) == "string" then
         user_input("There was an error when creating the file: " + cr)
      else
-        bat=c.File("/home/guest/BS.bat")
+        bat=c.File(A.dropzone+"/BS.bat")
      end if
     end if
-    sr=bat.set_content("meta=include_lib(""/home/guest/metaxploit.so"")"+char(10)+"get_custom_object[""local_meta""]=meta"+char(10)+"get_custom_object[""local_switch""]=get_switch"+char(10)+"get_custom_object[""local_router""]=get_router"+char(10)+"get_custom_object[""local_rshell""]=include_lib(""/home/guest/librshell.so"")"+char(10)+"exit")
+    sr=bat.set_content("meta=include_lib("""+A.dropzone+"/metaxploit.so"")"+char(10)+"get_custom_object[""local_meta""]=meta"+char(10)+"get_custom_object[""local_switch""]=get_switch"+char(10)+"get_custom_object[""local_router""]=get_router"+char(10)+"get_custom_object[""local_rshell""]=include_lib("""+A.dropzone+"/librshell.so"")"+char(10)+"exit")
     if typeof(sr) == "string" then
         user_input("There was an error while setting file content 21: " + sr)
      else
-        br=A.sessions.current.build("/home/guest/BS.bat","/home/guest")
+        br=A.sessions.current.build(A.dropzone+"/BS.bat",A.dropzone)
         if br != "" then
-            user_input("There was an error while compiling 25: " + br)
+            user_input("There was an error while compiling at"+A.dropzone+": " + br)
          else
             bat.set_content(A.log_msg)
-            A.sessions.current.launch("/home/guest/BS")
+            A.sessions.current.launch(A.dropzone+"/BS")
             A.sessions.local_object={"local_meta":get_custom_object["local_meta"],"local_router":get_custom_object["local_router"],"local_rshell":get_custom_object["local_rshell"]}
          end if
         end if
         if A.sessions.local_object.len>0 then
             if typeof(A.sessions.local_object["local_meta"])!="MetaxploitLib" then user_input(color.red+"Failed Getting Local Meta")
             if typeof(A.sessions.local_object["local_router"])!="router" then  user_input(color.red+"Failed Getting Local Router")
-            clear_screen
+            if A.debug!=1 then clear_screen
         end if
 end function
 A.programs={};A.handlers={};A.sessions={};A.sessions.current=get_shell;A.local_shell=get_shell;A.local_computer=get_shell.host_computer;A.sessions.shells=[{"object":get_shell,"user":active_user}];A.sessions.computers=[];A.sessions.files=[];A.shared={}
@@ -56,7 +81,7 @@ A.session_manager=function(mode="menu")
         opt=options[user_input("#").val]
         if opt=="delete" then 
             A.sessions.shells.remove(A.sessions.shells.indexOf(A.sessions.shells[sel]))
-            clear_screen
+            if A.debug!=1 then clear_screen
             A.session_manager
         else if opt=="connect" then 
             A.sessions.current=A.sessions.shells[sel].object
@@ -68,7 +93,7 @@ A.session_manager=function(mode="menu")
         else
             print "Not Valid Option"
             wait 3
-            clear_screen
+            if A.debug!=1 then clear_screen
             A.session_manager    
         end if
     else if mode=="save" then
@@ -78,7 +103,7 @@ A.session_manager=function(mode="menu")
 end function
 A.debug_msg=function(message="Debug Shit",clr="white");print(color[clr]+message);user_input(color.white+"Press Enter To Continue",0,1);end function
 A.results=[]
-A.stream_check=function(msg="You Are About To See Colonel Sanders' Secret Recipe!");if A.mode=="sp" then return;clear_screen;x=null;while x!="SAFE"; x=user_input(color.yellow+"<B>>>"+msg+"<<</b>"+char(10)+color.white+"Enter 'SAFE' Once GreyHack Is No Longer On Stream!> ");clear_screen;end while;return 1;end function
+A.stream_check=function(msg="You Are About To See Colonel Sanders' Secret Recipe!");if A.mode=="sp" then return;if A.debug!=1 then clear_screen;x=null;while x!="SAFE"; x=user_input(color.yellow+"<B>>>"+msg+"<<</b>"+char(10)+color.white+"Enter 'SAFE' Once GreyHack Is No Longer On Stream!> ");if A.debug!=1 then clear_screen;end while;return 1;end function
 A.shared_exploit_DB=function(mode="load",mlib,m=null,value=null)
     DB_dir=A.computer.File(A.ram.path+"/exploits")
     if not DB_dir then A.computer.create_folder(A.ram.path,"exploits")
@@ -130,7 +155,6 @@ A.shared_exploit_DB=function(mode="load",mlib,m=null,value=null)
     end if
 end function
 A.shared.hack=function(mlib,third="$",metaxploit=null)
-    A.results=[]
     if metaxploit==null then metaxploit=A.meta
     found=A.shared_exploit_DB("load",mlib)
     if not found or found ==[""] then 
@@ -224,9 +248,10 @@ A.setup=function()
     end for
     A.computer.touch(A.bios.path,".drama");A.dramaf=A.computer.File(A.bios.path+"/.drama");if A.dramaf.get_content=="" then A.dramaf.set_content("0");A.drama=A.dramaf.get_content.val
     A.computer.touch(A.bios.path,".debug");A.debugf=A.computer.File(A.bios.path+"/.debug");if A.debugf.get_content=="" then A.debugf.set_content(0);A.debug=A.debugf.get_content.val;if A.debug==1 then clear_screen=print
+    A.computer.touch(A.bios.path,".stream");A.streamf=A.computer.File(A.bios.path+"/.stream");if A.streamf.get_content=="" then A.streamf.set_content(0);A.stream=A.streamf.get_content.val
 end function
 A.info=function()
-    clear_screen;hide=1;if A.debug==1 then hide=0
+    if A.debug!=1 then clear_screen;hide=1;if A.debug==1 then hide=0
     print color.white+"Thank You For Using "+color.yellow+program_path.split("/").pop;print color.white+"Created By: "+color.yellow+"Quinn(discord:midsubspace)"+char(10)+"Discord Link: https://discord.gg/wyCE8hPZ6h";print color.white+"You Are Running Version: "+color.yellow+A.version;
     if A.computer.is_network_active==0 then;print color.white+"INTERNET STATUS: "+color.red+"Offline";else;print color.white+"INTERNET STATUS: "+color.green+"Online";end if
     if A.server_type=="remote" then;print color.white+"WAREHOUSE STATUS: "+color.green+"Remote";if hide==0 then print color.white+"WareHouse IP: "+color.yellow+A.remote_server.host_computer.public_ip;else;print color.white+"SERVER STATUS: "+color.green+"Local";end if
@@ -267,7 +292,7 @@ A.info=function()
 end function
 A.programs.logs={"name":"logs","desc":"Clears the logs of a system if ran as "+color.red+"root","usg":"XXX"}
 A.programs.logs.run=function(object)
-    objects=["file","shell","computer"]
+    objects=["file","shell","computer","number"]
     if not objects.hasIndex(typeof(object)) then object=A.sessions.current
     if typeof(object)=="file" then
         file=object
@@ -310,7 +335,7 @@ A.programs.logs.run=function(object)
 end function
 A.programs.scanlan={"name":"scanlan","desc":"Scan Local Network For Devices","usg":"scanlan"}
 A.programs.scanlan.run=function(mode="*")
-    clear_screen
+    if A.debug!=1 then clear_screen
     s=A.sessions.current
     h=s.host_computer
     router_count=0
@@ -439,10 +464,11 @@ A.programs.scanlan.run=function(mode="*")
 end function
 A.programs.local={"name":"local","desc":"Hacks libs in /lib","usg":"XXX"}
 A.programs.local.run=function()
+    A.results=[]
     A.local_shit
     A.hack_mode="local"
     A.computer.create_folder(A.ram.path,"exploits")
-    if not A.sessions.current.host_computer.File("/home/guest/metaxploit.so") then s=A.hardware_server.scp("/root/lib/metaxploit.so","/home/guest",A.sessions.current)
+    if not A.sessions.current.host_computer.File(A.dropzone+"/metaxploit.so") then s=A.hardware_server.scp("/root/lib/metaxploit.so",A.dropzone,A.sessions.current)
     local_meta=A.sessions.local_object["local_meta"]
     A.MetaLibs=[]
     if typeof(local_meta)!="MetaxploitLib" then ;print program_path+" update";A.terminal;end if
@@ -472,10 +498,11 @@ A.programs.local.run=function()
     for o in options;print n+")"+o;n=n+1;end for
     opt=user_input("PICK> ").val
     if options[opt]=="one" then;libs=local_nmap;opt=user_input("HACK:").val;A.MetaLibs=[local_meta.load(libs[opt])];else;local_nmap;end if
-    if user_input("'F'all or 'B'ounce?").lower=="b" then;third=user_input("Lan:");else;third="*";if user_input("Pwds y/n> ")=="y" then third=A.password;end if;
+    if user_input("'F'all or 'B'ounce?").lower=="b" then;third=user_input("Lan:");else;third="$";if user_input("Pwds y/n> ")=="y" then third=A.password;end if;
+    A.results=[]
     for metalib in A.MetaLibs
         if A.debug==1 then print color.blue+typeof(metalib+":"+metalib.lib_name)
-        if typeof(metalib)!="MetaLib" then exit "FAIL"
+        if typeof(metalib)!="MetaLib" then continue
         A.shared.hack(metalib,third)
     end for
         if A.results.len>0 then A.object_sorter
@@ -634,7 +661,7 @@ A.programs.update.run=function(mode="local",location=null)
         if location==null then 
             location=current_path
         else
-            location="/home/guest"
+            location=A.dropzone
         end if
         computer=A.sessions.current.host_computer
         print "Local Mode"
@@ -710,12 +737,12 @@ A.programs.nmap.run=function(ip)
             print color.red+"Firewalls on: "+ip
             data=color.white+"ACTION PORT SOURCE DESTINATION"
             while firewalls.len>0
-                rules[num]=firewalls.pop
+                rules[n]=firewalls.pop
                 n=n+1
             end while
             n=0
             while rules.len!=0
-                t=rules[num]
+                t=rules[n]
                 fire=t.split(" ")
                 if fire[0]=="ALLOW" then
                     fire.remove(0)
@@ -738,7 +765,7 @@ A.programs.nmap.run=function(ip)
                     going = fire[3]
                     data=data+char(10)+color.red+action+" "+port+" "+source+" "+going
                 end if
-                rules.remove(num)
+                rules.remove(n)
                 n=n+1
             end while
             print format(data)
@@ -850,6 +877,7 @@ A.handlers.se=function(result)
                             print("File content got changed successfully.")
                          end if
                     end if
+                    A.got_emails=1
                 end if
             end if
         end for
@@ -870,6 +898,7 @@ A.handlers.se=function(result)
                     else
                         db.set_content(db.get_content+char(10)+email_add+";"+email_pwd+";"+cpu.local_ip+";"+cpu.public_ip)
                     end if
+                    A.got_emails=1
                 end if
             end if
         end for
@@ -914,7 +943,7 @@ A.programs.file_explore.run=function(result=get_shell)
             end if
         end function
         display_list=function(current_folder)
-            clear_screen
+            if A.debug!=1 then clear_screen
             print("Current Path:"+current_folder.path)
             print color.purple+"Folders"
             print color.yellow+"Files"
@@ -958,7 +987,7 @@ A.programs.file_explore.run=function(result=get_shell)
             return (user_input("Action> "))
         end function
         folder_actions=function(folder)
-            clear_screen
+            if A.debug!=1 then clear_screen
             print "Targeting: "+folder.path
             options=[]
             options.push("enter")
@@ -975,7 +1004,7 @@ A.programs.file_explore.run=function(result=get_shell)
             end if
         end function
         file_actions=function(file)
-            clear_screen
+            if A.debug!=1 then clear_screen
             print "Targeting: "+file.path
             options=[]
             if file.has_permission("r") then 
@@ -1000,7 +1029,7 @@ A.programs.file_explore.run=function(result=get_shell)
             if target=="exit" then A.object_sorter
             if target==".." then 
                 if current_folder.name=="/" then 
-                    clear_screen
+                    if A.debug!=1 then clear_screen
                     display_list(current_folder)
                 else
                     display_list(current_folder.parent)
@@ -1022,11 +1051,11 @@ A.programs.file_explore.run=function(result=get_shell)
                 if folder_actions(current_object)=="enter" then display_list(current_object)
             else if current_object.is_folder==false then
                 file_actions(current_object)
-                clear_screen
+                if A.debug!=1 then clear_screen
                 display_list(current_folder)
             else
                 if user_input("Create File/Folder Named "+object+" In "+current_folder+" yes?'")=="yes" then creation_actions(object,current_folder)
-                clear_screen
+                if A.debug!=1 then clear_screen
             end if
         end function
         while result.name!="/" 
@@ -1091,7 +1120,7 @@ A.programs.file_explore.run=function(result=get_shell)
         end for
     end function
     file_actions=function(file)
-        clear_screen
+        if A.debug!=1 then clear_screen
         print "TARGETING:"+file.path
         options=[]
         if file.has_permission("x") and file.is_binary then
@@ -1130,7 +1159,7 @@ A.programs.file_explore.run=function(result=get_shell)
     end function
 
     folder_actions=function(folder)
-        clear_screen
+        if A.debug!=1 then clear_screen
         options=[]
         if folder.has_permission("w") then
             options.push("enter")
@@ -1175,7 +1204,7 @@ A.programs.file_explore.run=function(result=get_shell)
         end if
     end function
     while true
-        clear_screen
+        if A.debug!=1 then clear_screen
         files=[]
         folders=[]
         if current_folder==null then
@@ -1205,7 +1234,7 @@ A.programs.file_explore.run=function(result=get_shell)
             end for
             if found==0 then
                 if user_input("Create File/Folder Named "+object+" In "+current_folder+" yes?'")=="yes" then creation_actions(object,current_folder)
-                clear_screen
+                if A.debug!=1 then clear_screen
                 if A.fs_type=="computer" then current_folder=computer.File("/")
                 if A.fs_type=="shell" then current_folder=shell.host_computer.File("/")
                 display_list(current_folder)
@@ -1234,6 +1263,7 @@ A.programs.file_explore.run=function(result=get_shell)
     end while
 end function
 A.object_sorter=function(ip)
+    A.got_emails=0
     shells_access={};shells=[];computers=[];computers_access={};files=[];files_access={};numbers=[]
     for result in A.results
         //if typeof(result)=="shell" then;shells.push(result);A.handlers.se(result);else if typeof(result)=="computer" then;computers.push(result);A.handlers.se(result);else if typeof(result)=="file" then;files.push(result);A.handlers.se(result);else if typeof(result)=="number" then;numbers.push(result);end if
@@ -1241,7 +1271,7 @@ A.object_sorter=function(ip)
     end for
     n=0
     for shell in shells
-        A.handlers.se(result)
+        if A.got_emails==0 then A.handlers.se(result)
         //A.programs.servers.run("a",result)
         //A.programs.logs.run(result)
         access_level=color.white+"guest"
@@ -1258,7 +1288,7 @@ A.object_sorter=function(ip)
     end for
     n=0
     for computer in computers
-        A.handlers.se(result)
+        if A.got_emails==0 then A.handlers.se(result)
         //A.programs.servers.run("a",result)
         //A.programs.logs.run(result)
         access_level=color.white+"guest"
@@ -1296,7 +1326,7 @@ A.object_sorter=function(ip)
         n=n+1
     end for
     n=0
-    clear_screen
+    if A.debug!=1 then clear_screen
     if shells.len>0 then print color.white+"Shells:"+color.purple+shells.len
     if computers.len>0 then print color.white+"Computers:"+color.purple+computers.len
     if files.len>0 then print color.white+"Files:"+color.purple+files.len
@@ -1317,7 +1347,7 @@ A.object_sorter=function(ip)
         end if
         r=user_input("Which Shell: ")
         if r=="back" then
-            clear_screen
+            if A.debug!=1 then clear_screen
             A.object_sorter(ip)
         else
             result=shells[r.val]
@@ -1332,7 +1362,7 @@ A.object_sorter=function(ip)
         end if
         r=user_input("Which Computer: ")
         if r=="back" then
-            clear_screen
+            if A.debug!=1 then clear_screen
             A.object_sorter(ip)
         else
             result=computers[r.val]
@@ -1347,13 +1377,13 @@ A.object_sorter=function(ip)
         end if
         r=user_input("Which File: ")
         if r=="back" then
-            clear_screen
+            if A.debug!=1 then clear_screen
             A.object_sorter(ip)
         else
             result=files[r.val]
         end if
     else
-        clear_screen
+        if A.debug!=1 then clear_screen
         A.object_sorter(ip)
     end if
     options=["File Explorer?","Get Creds?"]
@@ -1421,13 +1451,13 @@ A.object_sorter=function(ip)
         end if
         A.object_sorter(ip)
     else
-        clear_screen
+        if A.debug!=1 then clear_screen
         A.object_sorter
     end if
 end function
 A.programs.hack={"name":"hack","desc":"Remotly Hack a System","usg":"ip_address"}
 A.programs.hack.run=function(ip)
-    clear_screen
+    if A.debug!=1 then clear_screen
     ip=A.programs.nmap.run(ip)
     A.hack_mode="remote"
     if is_lan_ip(ip) then
@@ -1462,19 +1492,20 @@ A.programs.hack.run=function(ip)
     else if options[action]=="exit" then
         return
     end if
+    A.results=[]
     if local==1 then
-        if not A.sessions.current.host_computer.File("/home/guest/metaxploit.so") then s=A.hardware_server.scp("/root/lib/metaxploit.so","/home/guest",A.sessions.current)
+        if not A.sessions.current.host_computer.File(A.dropzone+"/metaxploit.so") then s=A.hardware_server.scp("/root/lib/metaxploit.so",A.dropzone,A.sessions.current)
         local_meta=A.sessions.local_object["local_meta"]
         print typeof(local_meta)
         net_session=local_meta.net_use(ip,target_port.val)
-        if not net_session then exit color.red+"Err: no connection to net session"
+        if not net_session then user_input(color.red+"Err: no connection to net session")
     else
         if A.fake_meta!=null then 
-            net_session=A.fake_meta.net_use(ip,target_port)
+            net_session=A.fake_meta.net_use(ip,target_port.val)
         else
-            net_session=A.meta.net_use(ip,target_port)
+            net_session=A.meta.net_use(ip,target_port.val)
         end if
-        if not net_session then exit color.red+"Err: no connection to net session"
+        if not net_session then user_input(color.red+"Err: no connection to net session")
     end if
     admin_online=net_session.is_root_active_user;users_active=net_session.is_any_active_user;num_of_users=net_session.get_num_users;num_port_for=net_session.get_num_portforward;num_conn_gateways=net_session.get_num_conn_gateway
     if admin_online!=false then user_input(color.red+"ROOT IS ONLINE!!!!",0,1);if users_active==true and admin_online==false then user_input(color.yellow+"Non Root Users Are Online",0,1)
@@ -1518,7 +1549,7 @@ A.programs.auto_hack.run=function(ip,mode="hack")
     end if
     for item in port_nums
         if local==1 then
-            if not A.sessions.current.host_computer.File("/home/guest/metaxploit.so") then s=A.hardware_server.scp("/root/lib/metaxploit.so","/home/guest",A.sessions.current)
+            if not A.sessions.current.host_computer.File(A.dropzone+"/metaxploit.so") then s=A.hardware_server.scp("/root/lib/metaxploit.so",A.dropzone,A.sessions.current)
             A.local_shit
             local_meta=A.sessions.local_object["local_meta"]
             net_session=local_meta.net_use(ip,item)
@@ -1585,7 +1616,6 @@ A.programs.addons.run=function(mode="l",target=null)
             end for
             if action==null then;print(color.red+target +" Not found In Addons List");return;end if
         end if
-            local_meta=A.sessions.local_object["local_meta"]
             get_custom_object["server"]=A.server
             get_custom_object["home_shell"]=get_shell
             get_custom_object["home_computer"]=get_shell.host_computer
@@ -1596,7 +1626,8 @@ A.programs.addons.run=function(mode="l",target=null)
             get_custom_object["local_computer"]=A.sessions.current.host_computer
             get_custom_object["computer"]=A.sessions.current.host_computer
             get_custom_object["shell"]=A.sessions.current
-            get_custom_object["local_meta"]=local_meta
+            get_custom_object["local_meta"]=A.sessions.local_object["local_meta"]
+            get_custom_object["local_router"]=A.sessions.local_object["local_router"]
             get_custom_object["game_mode"]=A.mode
             get_custom_object["mail_pwd"]=A.mail_pass
             get_custom_object["pmail"]=user_mail_address
@@ -1620,12 +1651,12 @@ A.programs.root.run=function(shell=null)
     c=shell.host_computer
     shitbook=A.shared.wordlist[1]
     pwd_total=A.shared.wordlist[0]
-    if c.File("/home/guest").has_permission("w") then
-        c.touch("/home/guest","load.src")
-        file=c.File("/home/guest/load.src")
-        if not file then ;print user_input(color.red+"Unable to create payload at /home/guest/load.src",0,1);A.terminal;end if
+    if c.File(A.dropzone).has_permission("w") then
+        c.touch(A.dropzone,"load.src")
+        file=c.File(A.dropzone+"/load.src")
+        if not file then ;print user_input(color.red+"Unable to create payload at "+A.dropzone+"/load.src",0,1);A.terminal;end if
         if file then file.set_content("user=get_custom_object[""sudo_user""]"+char(10)+"password=get_custom_object[""sudo_password""]"+char(10)+"shell=get_shell(user,password)"+char(10)+"if typeof(shell)==""shell"" then"+char(10)+"get_custom_object[""sudo_shell""]=shell"+char(10)+"else"+char(10)+"get_custom_object[""sudo_shell""]=null"+char(10)+"end if")
-        buildResult = shell.build("/home/guest/load.src","/home/guest")
+        buildResult = shell.build(A.dropzone+"/load.src",A.dropzone)
         file.set_content(A.log_msg)
     end if
     pwd_file=c.File("/etc/passwd")
@@ -1636,7 +1667,7 @@ A.programs.root.run=function(shell=null)
             get_custom_object["sudo_user"]="root"
             get_custom_object["sudo_password"]=pwd
             get_custom_object["sudo_shell"]=null
-            shell.launch("/home/guest/load")
+            shell.launch(A.dropzone+"/load")
             if get_custom_object["sudo_shell"]!=null then 
                 A.sessions.current=get_custom_object["sudo_shell"]
                 A.terminal
@@ -1650,7 +1681,7 @@ A.programs.root.run=function(shell=null)
         if A.debug==1 then print color.white+n+"/"+pwd_total+":"+line
         get_custom_object["sudo_user"]="root"
         get_custom_object["sudo_password"]=line
-        shell.launch("/home/guest/load")
+        shell.launch(A.dropzone+"/load")
         r=null
         if get_custom_object["sudo_shell"]!=null then r=get_custom_object["sudo_shell"]
         if typeof(r)=="shell" then
@@ -1660,7 +1691,7 @@ A.programs.root.run=function(shell=null)
         for user in shell.host_computer.File("/home").get_folders
             get_custom_object["sudo_user"]=user.name
             get_custom_object["sudo_password"]=line
-            shell.launch("/home/guest/load")
+            shell.launch(A.dropzone+"/load")
             r=null
             if get_custom_object["sudo_shell"]!=null then r=get_custom_object["sudo_shell"]
             if typeof(r)=="shell" then
@@ -1672,7 +1703,7 @@ A.programs.root.run=function(shell=null)
                         get_custom_object["sudo_user"]="root"
                         get_custom_object["sudo_password"]=pwd
                         get_custom_object["sudo_shell"]=null
-                        shell.launch("/home/guest/load")
+                        shell.launch(A.dropzone+"/load")
                         if get_custom_object["sudo_shell"]!=null then 
                             A.sessions.current=get_custom_object["sudo_shell"]
                             A.terminal
@@ -1931,7 +1962,7 @@ A.programs.servers.run=function(mode="v",o="shell",public_tar="*",local_tar="*")
         end for
     end if
     if mode=="v" then
-        if A.debug==1 then A.stream_check("You Are About to Reveal The Winning Lottery Numbers")
+        if A.stream==1 then A.stream_check("You Are About to Reveal The Winning Lottery Numbers")
         local_tar=public_tar
         public_tar=o
         data=color.white+"<u>Public Local User Password"//TODO add column for if server as ssh/ftp as we can use this info to get into the system
@@ -2034,7 +2065,7 @@ end function
 A.programs.get_user_pass={"name":"get_user_pass","desc":"Decrypts /etc/passwd","usg":"object user mode"}
 A.programs.get_user_pass.run=function(object=null,user="root",mode="single")
     if object==null then object=A.sessions.current
-    users=[]
+    users=["root"]
     stuff=function(passwdfile)
         if typeof(passwdfile)=="file" and passwdfile.has_permission("r") then
             for line in passwdfile.get_content.split(char(10))
@@ -2050,13 +2081,29 @@ A.programs.get_user_pass.run=function(object=null,user="root",mode="single")
     end function
     if typeof(object)=="shell" then
         passwdfile=object.host_computer.File("/etc/passwd")
+        for u in object.host_computer.File("/home").get_folders
+            if u=="guest" then continue
+            users.push(u.name)
+        end for
         pwd=stuff(passwdfile)
     else if typeof(object)=="computer" then
         passwdfile=object.File("/etc/passwd")
+        for u in object.File("/home").get_folders
+            if u=="guest" then continue
+            users.push(u.name)
+        end for
         pwd=stuff(passwdfile)
     else if typeof(object)=="file" then
         f=object
         while f.name!="/";f=f.parent;end while
+            for i in f.get_folders
+                if i.name=="home" then
+                    for u in i.get_folders
+                        if u.name=="guest" then continue
+                        users.push(u.name)
+                    end for
+                end if
+            end for
         for i in f.get_folders;if i.name=="etc" then f=i;end for
         for i in f.get_files;if i.name=="passwd" then passwdfile=i;end for
         pwd=stuff(passwdfile)
@@ -2077,7 +2124,7 @@ A.programs.get_user_pass.run=function(object=null,user="root",mode="single")
         end for
         user=user_input("Username: ").lower
         for line in passwdfile.get_content.split(char(10))
-            if line.split(":")[0].lower==user then return("Password For "+user+":"+A.programs.rainbow.run("hash",0,0,line.split(":")[1]))
+            if line.split(":")[0].lower==user then print("Password For "+user+":"+A.programs.rainbow.run("hash",0,0,line.split(":")[1]))
         end for
     end if
 end function
@@ -2088,8 +2135,8 @@ A.programs.portal.run=function(mode="connect")
     if mode!="connect" then
         A.programs.portal_server.run
     else
-        if A.debug==1 then A.stream_check("You Are About To Display Your Browser History")
-        s=A.hardware_server.scp("/root/lib/metaxploit.so","/home/guest",A.sessions.current)
+        if A.stream==1 then A.stream_check("You Are About To Display Your Browser History")
+        s=A.hardware_server.scp("/root/lib/metaxploit.so",A.dropzone,A.sessions.current)
         if typeof(s) == "string" then
             exit("There was an error while sending file: " + s)
         else
@@ -2100,32 +2147,41 @@ A.programs.portal.run=function(mode="connect")
         process_name=A.password
         s=A.sessions.current
         c=s.host_computer
-        c.touch("/home/guest","BattleShip.bat")
-        file=c.File("/home/guest/BattleShip.bat")
-        file.set_content("s=get_shell"+char(10)+"c=s.host_computer"+char(10)+"meta=include_lib(""/home/guest/metaxploit.so"")"+char(10)+char(10)+"meta.rshell_client("""+rshell_ip+""","+rshell_port+","""+process_name+""")")
-        BuildResult=s.build("/home/guest/BattleShip.bat","/home/guest")
+        c.touch(A.dropzone,"BattleShip.bat")
+        file=c.File(A.dropzone+"/BattleShip.bat")
+        file.set_content("s=get_shell"+char(10)+"c=s.host_computer"+char(10)+"meta=include_lib("""+A.dropzone+"/metaxploit.so"")"+char(10)+char(10)+"meta.rshell_client("""+rshell_ip+""","+rshell_port+","""+process_name+""")")
+        BuildResult=s.build(A.dropzone+"/BattleShip.bat",A.dropzone)
         if BuildResult !="" then
             exit "There Was An Error While Compiling: "+BuildResult
         else
             print "File was created"
         end if
-        c.File("/home/guest/BattleShip.bat").set_content("Viper Has Sunk Your BattleShip!"+char(10)+A.log_msg)
-        s.launch("/home/guest/BattleShip")
+        skip=0
+        c.File(A.dropzone+"/BattleShip.bat").set_content("We Have Sunk Your BattleShip!"+char(10)+A.log_msg)
+        for i in s.host_computer.show_procs.split(char(10))
+            if i.split(" ")[4]==process_name then skip=1
+        end for
+        if skip==0  then 
+            s.launch(A.dropzone+"/BattleShip")
+        else
+            print color.white+"Only One Portal Per Device!"
+            A.terminal
+        end if
     end if
 end function
 A.programs.portal_server={"name":"portal_server","desc":"Sets up the Portal Server","usg":"XXX"}
 A.programs.portal_server.run=function
-    if A.debug==1 then A.stream_check
+    if A.stream==1 then A.stream_check
     s=A.hardware_server.scp("/root/lib/metaxploit.so","/lib",A.sessions.current)
     s=A.hardware_server.scp("/root/re","/lib",A.sessions.current)
-    s=A.remote_server.scp("/root/shadow_data/lib/librshell.so","/home/guest",A.sessions.current)
+    s=A.remote_server.scp("/root/shadow_data/lib/librshell.so",A.dropzone,A.sessions.current)
     if typeof(s) == "string" then
         exit("There was an error while sending file: " + s)
     else
         print("File got sent successfully.")
     end if
     A.local_shit
-    A.sessions.current.host_computer.File("/home/guest/librshell.so").move("/lib","librshell.so")
+    A.sessions.current.host_computer.File(A.dropzone+"/librshell.so").move("/lib","librshell.so")
     rshelld = A.sessions.local_object["local_rshell"]
     if not rshelld or rshelld==null or rshelld=="null" then
         hack_shop=user_input("HackShop IP: ")
@@ -2142,8 +2198,8 @@ A.programs.portal_server.run=function
     print "port:1222"
     print("<b> Type 'Browser.exe " +A.sessions.local_object["local_router"].local_ip+":8080 @ "+A.sessions.current.host_computer.local_ip+" to access the router config and make sure the the service is accesible</b>")
     print A.sessions.current.host_computer.public_ip
-    A.sessions.current.host_computer.touch("/home/guest","re.bat")
-    bat=A.sessions.current.host_computer.File("/home/guest/re.bat")
+    A.sessions.current.host_computer.touch(A.dropzone,"re.bat")
+    bat=A.sessions.current.host_computer.File(A.dropzone+"/re.bat")
     bat.set_content("metaxploit=include_lib(""/lib/metaxploit.so"")
     if not metaxploit then
     metaxploit=include_lib(current_path+""/metaxploit.so"")
@@ -2234,14 +2290,14 @@ A.programs.portal_server.run=function
     continue
     end if
     end while")
-    BR = A.sessions.current.build("/home/guest/re.bat","/home/guest")
+    BR = A.sessions.current.build(A.dropzone+"/re.bat",A.dropzone)
     if BR != "" then
     print("There was an error while compiling: " + BR)
     else
     print("File has been compiled.")
     end if
     get_custom_object["rshell_object"]=null
-    A.sessions.current.launch("/home/guest/re")
+    A.sessions.current.launch(A.dropzone+"/re")
     if get_custom_object["rshell_object"]!=null then 
         A.sessions.current=get_custom_object["rshell_object"]
         A.local_shit
@@ -2329,8 +2385,9 @@ A.terminal=function()
         if p.len != 1 or p[0] == "-h" or p[0] == "--help" then print(command_info("cat_usage"))
         pathFile = p[0]
         file = c.File(pathFile)
-        if file == null then file=c.File(cmds.dir+"/"+p[0])
-        if file == null then print("cat: file not found: "+pathFile)
+        if file==null then file=c.File(cmds.dir+"/"+p[0])
+        if file==null then print("cat: file not found: "+pathFile)
+        if file==null then A.terminal
         if file.is_binary then print("cat: can't open " + file.path + ". Binary file")	
         if not file.has_permission("r") then print("cat: permission denied")
         if file.get_content=="" then 
@@ -2603,9 +2660,11 @@ A.terminal=function()
         inputMsg = "Changing password for user " + p[0] +".\nNew password:"
         inputPass = user_input(inputMsg, true)
         output = c.change_password(p[0], inputPass)
-        if output == true then print("password modified OK")
-        if output then print(output)
-        print("Error: password not modified")
+        if output == true then 
+            print("password modified OK")
+        else
+            print("Error: password not modified")
+        end if
     end function
     cmds.nslookup=function(p)
         if p.len != 1 or p[0] == "-h" or p[0] == "--help" then
@@ -2859,7 +2918,7 @@ A.terminal=function()
         exit
     end function
     cmds.clear=function(p)
-        clear_screen
+        if A.debug!=1 then clear_screen
     end function
     cmds.ls=function(p)
         s=A.sessions.current
@@ -2994,7 +3053,7 @@ A.terminal=function()
                 print A.sessions.local_object["local_meta"].sniffer
                 x=user_input("Exit?").lower
                 if x!="exit" then
-                    clear_screen
+                    if A.debug!=1 then clear_screen
                     print color.white+"Listening for Incoming Connections..."
                 end if
             end if
@@ -3026,6 +3085,18 @@ A.terminal=function()
                 print color.white+"Debug Mode Turned Off!"
                 A.debugf.set_content(0)
                 A.debug=0
+                continue
+            end if
+        else if input[0]=="stream" then
+            if A.stream==0 then
+                print color.white+"Turning on Streaming Mode!"
+                A.streamf.set_content(1)
+                A.stream=1
+                continue
+            else
+                print color.white+"Streaming Mode Turned Off!"
+                A.streamf.set_content(0)
+                A.stream=0
                 continue
             end if
         else if input[0]=="dock" then
@@ -3121,5 +3192,5 @@ A.terminal=function()
 end function
 A.setup
 A.local_shit
-clear_screen
+if A.debug!=1 then clear_screen
 A.terminal
